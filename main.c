@@ -29,14 +29,6 @@ int main(void) {
     }
   }
 
-  // for (int i = 0; i < n; ++i) {
-  //   for (int j = 0; j < m; ++j) {
-  //     printf(" %d", a[i][j]);
-  //   }
-  //   putchar('\n');
-  // }
-  // putchar('\n');
-
   int simplex_lines = n + 1;
   int simplex_columns = m + n + 1;
   double **first_phase = (double **)malloc(sizeof(double *) * simplex_lines);
@@ -144,6 +136,17 @@ int main(void) {
     }
     putchar('\n');
   }
+
+  for (int i = 0; i < simplex_lines; i++) {
+    free(first_phase[i]);
+  }
+  for (int i = 0; i < n; i++) {
+    free(a[i]);
+  }
+  free(first_phase);
+  free(a);
+  free(c);
+  free(b);
 
   return EXIT_SUCCESS;
 }
