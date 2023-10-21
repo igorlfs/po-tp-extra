@@ -8,7 +8,7 @@
             "preLaunchTask": "Compile C (Clang) (Debug)",
             "expressions": "native",
             "stdio": [
-                "input/XX",
+                "input/XZ",
                 null,
                 null
             ],

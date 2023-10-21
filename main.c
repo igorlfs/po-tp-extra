@@ -30,7 +30,7 @@ int main(void) {
   }
 
   int simplex_lines = n + 1;
-  int simplex_columns = m + n + 1;
+  int simplex_columns = n + m + n + 1;
   double **first_phase = (double **)malloc(sizeof(double *) * simplex_lines);
 
   for (int i = 0; i < simplex_lines; ++i) {
@@ -41,7 +41,7 @@ int main(void) {
   // Criando a linha do topo
   for (int i = 0; i < simplex_columns; ++i) {
     // TODO(dev): Ui = 1 se bi >= e -1 cc
-    if (i >= m && i != simplex_columns - 1) {
+    if (i >= n + m && i != simplex_columns - 1) {
       first_phase[0][i] = 1;
     } else {
       first_phase[0][i] = 0;
@@ -51,26 +51,31 @@ int main(void) {
   // Botando a matriz 'a' dentro
   for (int i = 0; i < n; ++i) {
     for (int j = 0; j < m; ++j) {
-      if (b[i] < 0) {
-        first_phase[i + 1][j] = -a[i][j];
-      } else {
-        first_phase[i + 1][j] = a[i][j];
-      }
-    }
-  }
-
-  // Colocando o vetor de b's
-  for (int i = 0; i < n; ++i) {
-    if (b[i] <= 0) {
-      first_phase[i + 1][simplex_columns - 1] = -b[i];
-    } else {
-      first_phase[i + 1][simplex_columns - 1] = b[i];
+      first_phase[i + 1][n + j] = a[i][j];
     }
   }
 
   // Colocando a identidade
   for (int i = 0; i < n; ++i) {
-    first_phase[i + 1][m + i] = 1;
+    first_phase[i + 1][i] = 1;
+  }
+
+  // Colocando o vetor de b's
+  for (int i = 0; i < n; ++i) {
+    if (b[i] < 0) {
+      first_phase[i + 1][simplex_columns - 1] = -b[i];
+      for (int j = 0; j < simplex_columns - 1; ++j) {
+        first_phase[i + 1][j] *= -1;
+      }
+    } else {
+      first_phase[i + 1][simplex_columns - 1] = b[i];
+    }
+  }
+
+  // Colocando a identidade (das variáveis adicionais)
+  // Essa não deve ser invertida com o 'b'
+  for (int i = 0; i < n; ++i) {
+    first_phase[i + 1][n + m + i] = 1;
   }
 
   // Colocando na base canônica
@@ -80,7 +85,7 @@ int main(void) {
     }
   }
 
-  for (int i = 0; i < simplex_columns; ++i) {
+  for (int i = n; i < simplex_columns; ++i) {
     // TODO(dev): regra de Bland (aula 11)
     if (first_phase[0][i] < 0) {
       double max_ratio = -INFINITY;
@@ -123,7 +128,7 @@ int main(void) {
       }
       for (int j = 0; j < simplex_lines; ++j) {
         for (int k = 0; k < simplex_columns; ++k) {
-          printf(" %f", first_phase[j][k]);
+          printf(" %.2f", first_phase[j][k]);
         }
         putchar('\n');
       }
@@ -132,7 +137,7 @@ int main(void) {
 
   for (int i = 0; i < simplex_lines; ++i) {
     for (int j = 0; j < simplex_columns; ++j) {
-      printf(" %f", first_phase[i][j]);
+      printf(" %.2f", first_phase[i][j]);
     }
     putchar('\n');
   }
