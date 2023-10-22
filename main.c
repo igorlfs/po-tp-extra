@@ -227,7 +227,7 @@ int main(void) {
           }
 
           // Pivoteamento
-          if (min_ratio != -INFINITY) {
+          if (min_ratio != INFINITY) {
             // Parte 1: Dividindo linha pelo maior razão (para o elemento ser 1)
             double multiplier = second_phase[min_ratio_index][i];
             for (int j = 0; j < second_columns; ++j) {
@@ -247,6 +247,22 @@ int main(void) {
               }
             }
           }
+          // A solução é ilimitada quando nenhuma das razões é menor que 0
+          else {
+            printf("ilimitada\n");
+            // FIXME na verdade, tem que saber quem está na base
+            // Dá pra checar isso "na força bruta" olhando quem é todo 0 exceto
+            // na linha com o valor
+            for (int j = 0; j < second_lines; ++j) {
+              printf("%.6f ", second_phase[j][second_columns - 1]);
+            }
+            putchar('\n');
+            for (int j = 0; j < second_lines; ++j) {
+              printf("%.6f ", -second_phase[j][i]);
+            }
+            putchar('\n');
+            loop_second_phase = false;
+          }
 
           // for (int j = 0; j < second_lines; ++j) {
           //   for (int k = 0; k < second_columns; ++k) {
@@ -261,7 +277,7 @@ int main(void) {
           break;
         }
         // Se ninguém pode sair da base, sair do loop
-        if (i == second_columns - 2) {
+        if (i == second_columns - 2 && loop_second_phase) {
           printf("otima\n");
           printf("%.6f\n", second_phase[0][second_columns - 1]);
           // FIXME na verdade, tem que saber quem está na base
