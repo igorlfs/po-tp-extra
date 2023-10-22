@@ -85,13 +85,6 @@ int main(void) {
   bool loop_first_phase = true;
   bool is_viable = true;
   while (loop_first_phase) {
-    // for (int j = 0; j < simplex_lines; ++j) {
-    //   for (int k = 0; k < simplex_columns; ++k) {
-    //     printf(" %+05.1f", first_phase[j][k]);
-    //   }
-    //   putchar('\n');
-    // }
-    // putchar('\n');
     for (int i = n; i < simplex_columns - 1; ++i) {
       if (first_phase[0][i] < 0) {
         // BUG Por que isso funciona com o máximo mas não com o mínimo?
@@ -191,13 +184,6 @@ int main(void) {
     for (int i = 0; i < n; ++i) {
       second_phase[i + 1][second_columns - 1] = b[i];
     }
-
-    // for (int j = 0; j < second_lines; ++j) {
-    //   for (int k = 0; k < second_columns; ++k) {
-    //     printf(" %+.1f", second_phase[j][k]);
-    //   }
-    //   putchar('\n');
-    // }
 
     bool loop_second_phase = true;
     while (loop_second_phase) {
