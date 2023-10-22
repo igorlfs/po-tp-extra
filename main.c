@@ -10,8 +10,8 @@ int main(void) {
 
   scanf("%d %d", &n, &m);
 
-  double *c = (double *)malloc(sizeof(double *) * m);
-  double *b = (double *)malloc(sizeof(double *) * n);
+  double *c = (double *)malloc(sizeof(double) * m);
+  double *b = (double *)malloc(sizeof(double) * n);
 
   for (int i = 0; i < m; ++i) {
     scanf("%lf", &c[i]);
@@ -40,16 +40,12 @@ int main(void) {
   }
 
   // Criando a linha do topo
-  for (int i = 0; i < simplex_columns; ++i) {
+  for (int i = n + m; i < simplex_columns - 1; ++i) {
     // TODO(dev): Ui = 1 se bi >= e -1 cc
-    if (i >= n + m && i != simplex_columns - 1) {
-      first_phase[0][i] = 1;
-    } else {
-      first_phase[0][i] = 0;
-    }
+    first_phase[0][i] = 1;
   }
 
-  // Botando a matriz 'a' dentro
+  // Colocando a matriz 'a'
   for (int i = 0; i < n; ++i) {
     for (int j = 0; j < m; ++j) {
       first_phase[i + 1][n + j] = a[i][j];
@@ -86,10 +82,19 @@ int main(void) {
     }
   }
 
-  bool loop = true;
-  while (loop) {
+  bool loop_first_phase = true;
+  bool is_viable = true;
+  while (loop_first_phase) {
+    // for (int j = 0; j < simplex_lines; ++j) {
+    //   for (int k = 0; k < simplex_columns; ++k) {
+    //     printf(" %+05.1f", first_phase[j][k]);
+    //   }
+    //   putchar('\n');
+    // }
+    // putchar('\n');
     for (int i = n; i < simplex_columns - 1; ++i) {
       if (first_phase[0][i] < 0) {
+        // BUG Por que isso funciona com o máximo mas não com o mínimo?
         double max_ratio = -INFINITY;
         int max_ratio_index = -1;
 
@@ -138,26 +143,146 @@ int main(void) {
         // Um jeito de fazer isso é breakar o loop
         break;
       }
-      // Se ninguém pode sair da base, a gente sai
+      // Se ninguém pode sair da base, sair do loop
       if (i == simplex_columns - 2) {
         // Problema é inviável
         if (first_phase[0][simplex_columns - 1] < 0) {
+          is_viable = false;
           printf("inviavel\n");
           for (int j = 0; j < n; ++j) {
             printf("%.6f ", first_phase[0][j]);
           }
           putchar('\n');
         }
-        loop = false;
+        loop_first_phase = false;
       }
     }
   }
 
-  for (int i = 0; i < simplex_lines; ++i) {
-    for (int j = 0; j < simplex_columns; ++j) {
-      printf(" %.2f", first_phase[i][j]);
+  if (is_viable) {
+    int second_lines = n + 1;
+    int second_columns = n + m + 1;
+    double **second_phase = (double **)malloc(sizeof(double *) * second_lines);
+
+    for (int i = 0; i < second_lines; ++i) {
+      second_phase[i] = (double *)malloc(sizeof(double) * second_columns);
+      memset(second_phase[i], 0, sizeof(int) * second_columns);
     }
-    putchar('\n');
+
+    // Criando a linha do topo
+    for (int i = 0; i < m; ++i) {
+      // TODO(dev): Ui = 1 se bi >= e -1 cc
+      second_phase[0][i + n] = -c[i];
+    }
+
+    // Botando a matriz 'a' dentro
+    for (int i = 0; i < n; ++i) {
+      for (int j = 0; j < m; ++j) {
+        second_phase[i + 1][n + j] = a[i][j];
+      }
+    }
+
+    // Colocando a identidade
+    for (int i = 0; i < n; ++i) {
+      second_phase[i + 1][i] = 1;
+    }
+
+    // Colocando o vetor de b's
+    for (int i = 0; i < n; ++i) {
+      second_phase[i + 1][second_columns - 1] = b[i];
+    }
+
+    // for (int j = 0; j < second_lines; ++j) {
+    //   for (int k = 0; k < second_columns; ++k) {
+    //     printf(" %+.1f", second_phase[j][k]);
+    //   }
+    //   putchar('\n');
+    // }
+
+    bool loop_second_phase = true;
+    while (loop_second_phase) {
+      for (int i = n; i < second_columns - 1; ++i) {
+        if (second_phase[0][i] < 0) {
+          double min_ratio = INFINITY;
+          int min_ratio_index = -1;
+
+          // Encontrando o índice para entrar na base
+          for (int j = 0; j < n; ++j) {
+            // Isso aqui provavelmente exige mais cuidado
+            if (second_phase[j + 1][second_columns - 1] == 0) {
+              continue;
+            }
+
+            double ratio = second_phase[j + 1][i] /
+                           second_phase[j + 1][second_columns - 1];
+            // Regra de Bland: nós sempre pegamos a variável de menor índice
+            // dentre aquelas que podem entrar na base.
+            //
+            // Um jeito de fazer isso é não trocar a razão quando quando há
+            // empate: só trocar quando de fato for menor
+            if (ratio > 0 && ratio < min_ratio) {
+              min_ratio = ratio;
+              min_ratio_index = j + 1;
+            }
+          }
+
+          // Pivoteamento
+          if (min_ratio != -INFINITY) {
+            // Parte 1: Dividindo linha pelo maior razão (para o elemento ser 1)
+            double multiplier = second_phase[min_ratio_index][i];
+            for (int j = 0; j < second_columns; ++j) {
+              second_phase[min_ratio_index][j] =
+                  second_phase[min_ratio_index][j] / multiplier;
+            }
+            // Parte 2: Zerando outras colunas
+            for (int j = 0; j < second_lines; ++j) {
+              // Estamos na coluna que realmente deve ser igual a 1
+              if (j == min_ratio_index) {
+                continue;
+              }
+              double ratio =
+                  second_phase[j][i] / second_phase[min_ratio_index][i];
+              for (int k = 0; k < second_columns; ++k) {
+                second_phase[j][k] -= ratio * second_phase[min_ratio_index][k];
+              }
+            }
+          }
+
+          // for (int j = 0; j < second_lines; ++j) {
+          //   for (int k = 0; k < second_columns; ++k) {
+          //     printf(" %.2f", second_phase[j][k]);
+          //   }
+          //   putchar('\n');
+          // }
+          // Regra de Bland: para escolher a variável que vai sair da base, nós
+          // escolhemos a de menor índice
+          //
+          // Um jeito de fazer isso é breakar o loop
+          break;
+        }
+        // Se ninguém pode sair da base, sair do loop
+        if (i == second_columns - 2) {
+          printf("otima\n");
+          printf("%.6f\n", second_phase[0][second_columns - 1]);
+          // FIXME na verdade, tem que saber quem está na base
+          // Dá pra checar isso "na força bruta" olhando quem é todo 0 exceto na
+          // linha com o valor
+          for (int j = 1; j < second_lines; ++j) {
+            printf("%.6f ", second_phase[j][second_columns - 1]);
+          }
+          putchar('\n');
+          for (int j = 0; j < n; ++j) {
+            printf("%.6f ", second_phase[0][j]);
+          }
+          putchar('\n');
+          loop_second_phase = false;
+        }
+      }
+    }
+    for (int i = 0; i < second_lines; i++) {
+      free(second_phase[i]);
+    }
+    free(second_phase);
   }
 
   for (int i = 0; i < simplex_lines; i++) {
