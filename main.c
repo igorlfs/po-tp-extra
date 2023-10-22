@@ -1,4 +1,5 @@
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -85,52 +86,69 @@ int main(void) {
     }
   }
 
-  for (int i = n; i < simplex_columns; ++i) {
-    // TODO(dev): regra de Bland (aula 11)
-    if (first_phase[0][i] < 0) {
-      double max_ratio = -INFINITY;
-      int max_ratio_index = -1;
+  bool loop = true;
+  while (loop) {
+    for (int i = n; i < simplex_columns - 1; ++i) {
+      if (first_phase[0][i] < 0) {
+        double max_ratio = -INFINITY;
+        int max_ratio_index = -1;
 
-      // Encontrando o índice para entrar na base
-      for (int j = 0; j < n; ++j) {
-        if (first_phase[j + 1][simplex_columns - 1] == 0) {
-          // TODO(dev): se ninguém puder entrar então o problema é esquisitinho
-          continue;
-        }
-        double ratio =
-            first_phase[j + 1][i] / first_phase[j + 1][simplex_columns - 1];
-        if (ratio >= max_ratio) {
-          max_ratio = ratio;
-          max_ratio_index = j + 1;
-        }
-      }
-
-      // TODO(dev): fazer o estendido e já matar a inviabilidade
-      // Pivoteamento
-      if (max_ratio != -INFINITY) {
-        // Parte 1: Dividindo linha pelo maior razão (para o elemento ser 1)
-        double multiplier = first_phase[max_ratio_index][i];
-        for (int j = 0; j < simplex_columns; ++j) {
-          first_phase[max_ratio_index][j] =
-              first_phase[max_ratio_index][j] / multiplier;
-        }
-        // Parte 2: Zerando outras colunas
-        for (int j = 0; j < simplex_lines; ++j) {
-          // Estamos na coluna que realmente deve ser igual a 1
-          if (j == max_ratio_index) {
+        // Encontrando o índice para entrar na base
+        for (int j = 0; j < n; ++j) {
+          if (first_phase[j + 1][simplex_columns - 1] == 0) {
             continue;
           }
-          double ratio = first_phase[j][i] / first_phase[max_ratio_index][i];
-          for (int k = 0; k < simplex_columns; ++k) {
-            first_phase[j][k] -= ratio * first_phase[max_ratio_index][k];
+          double ratio =
+              first_phase[j + 1][i] / first_phase[j + 1][simplex_columns - 1];
+          // Regra de Bland: nós sempre pegamos a variável de menor índice
+          // dentre aquelas que podem entrar na base.
+          //
+          // Um jeito de fazer isso é não trocar a razão quando quando há
+          // empate: só trocar quando de fato for maior
+          if (ratio > max_ratio) {
+            max_ratio = ratio;
+            max_ratio_index = j + 1;
           }
         }
-      }
-      for (int j = 0; j < simplex_lines; ++j) {
-        for (int k = 0; k < simplex_columns; ++k) {
-          printf(" %.2f", first_phase[j][k]);
+
+        // Pivoteamento
+        if (max_ratio != -INFINITY) {
+          // Parte 1: Dividindo linha pelo maior razão (para o elemento ser 1)
+          double multiplier = first_phase[max_ratio_index][i];
+          for (int j = 0; j < simplex_columns; ++j) {
+            first_phase[max_ratio_index][j] =
+                first_phase[max_ratio_index][j] / multiplier;
+          }
+          // Parte 2: Zerando outras colunas
+          for (int j = 0; j < simplex_lines; ++j) {
+            // Estamos na coluna que realmente deve ser igual a 1
+            if (j == max_ratio_index) {
+              continue;
+            }
+            double ratio = first_phase[j][i] / first_phase[max_ratio_index][i];
+            for (int k = 0; k < simplex_columns; ++k) {
+              first_phase[j][k] -= ratio * first_phase[max_ratio_index][k];
+            }
+          }
         }
-        putchar('\n');
+
+        // Regra de Bland: para escolher a variável que vai sair da base, nós
+        // escolhemos a de menor índice
+        //
+        // Um jeito de fazer isso é breakar o loop
+        break;
+      }
+      // Se ninguém pode sair da base, a gente sai
+      if (i == simplex_columns - 2) {
+        // Problema é inviável
+        if (first_phase[0][simplex_columns - 1] < 0) {
+          printf("inviavel\n");
+          for (int j = 0; j < n; ++j) {
+            printf("%.6f ", first_phase[0][j]);
+          }
+          putchar('\n');
+        }
+        loop = false;
       }
     }
   }
