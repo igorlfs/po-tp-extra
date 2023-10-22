@@ -150,7 +150,7 @@ int main(void) {
           is_viable = false;
           printf("inviavel\n");
           for (int j = 0; j < n; ++j) {
-            printf("%.6f ", first_phase[0][j]);
+            printf("%.0f ", first_phase[0][j]);
           }
           putchar('\n');
         }
@@ -250,26 +250,33 @@ int main(void) {
           // A solução é ilimitada quando nenhuma das razões é menor que 0
           else {
             printf("ilimitada\n");
-            // FIXME na verdade, tem que saber quem está na base
-            // Dá pra checar isso "na força bruta" olhando quem é todo 0 exceto
-            // na linha com o valor
-            for (int j = 0; j < second_lines; ++j) {
-              printf("%.6f ", second_phase[j][second_columns - 1]);
+            for (int j = n; j < second_columns - 1; ++j) {
+              if (second_phase[0][j] == 0) {
+                int num_ones = 0;
+                int index_one = -1;
+                for (int k = 1; k < second_lines; ++k) {
+                  if (second_phase[k][j] == 1) {
+                    num_ones++;
+                    index_one = k;
+                  }
+                }
+                if (num_ones == 1) {
+                  printf("%.0f ", second_phase[index_one][second_columns - 1]);
+                } else {
+                  printf("%.0f ", 0.);
+                }
+              } else {
+                printf("%.0f ", 0.);
+              }
             }
             putchar('\n');
             for (int j = 0; j < second_lines; ++j) {
-              printf("%.6f ", -second_phase[j][i]);
+              printf("%.0f ", -second_phase[j][i]);
             }
             putchar('\n');
             loop_second_phase = false;
           }
 
-          // for (int j = 0; j < second_lines; ++j) {
-          //   for (int k = 0; k < second_columns; ++k) {
-          //     printf(" %.2f", second_phase[j][k]);
-          //   }
-          //   putchar('\n');
-          // }
           // Regra de Bland: para escolher a variável que vai sair da base, nós
           // escolhemos a de menor índice
           //
@@ -279,16 +286,29 @@ int main(void) {
         // Se ninguém pode sair da base, sair do loop
         if (i == second_columns - 2 && loop_second_phase) {
           printf("otima\n");
-          printf("%.6f\n", second_phase[0][second_columns - 1]);
-          // FIXME na verdade, tem que saber quem está na base
-          // Dá pra checar isso "na força bruta" olhando quem é todo 0 exceto na
-          // linha com o valor
-          for (int j = 1; j < second_lines; ++j) {
-            printf("%.6f ", second_phase[j][second_columns - 1]);
+          printf("%.0f\n", second_phase[0][second_columns - 1]);
+          for (int j = n; j < second_columns - 1; ++j) {
+            if (second_phase[0][j] == 0) {
+              int num_ones = 0;
+              int index_one = -1;
+              for (int k = 1; k < second_lines; ++k) {
+                if (second_phase[k][j] == 1) {
+                  num_ones++;
+                  index_one = k;
+                }
+              }
+              if (num_ones == 1) {
+                printf("%.0f ", second_phase[index_one][second_columns - 1]);
+              } else {
+                printf("%.0f ", 0.);
+              }
+            } else {
+              printf("%.0f ", 0.);
+            }
           }
           putchar('\n');
           for (int j = 0; j < n; ++j) {
-            printf("%.6f ", second_phase[0][j]);
+            printf("%.0f ", second_phase[0][j]);
           }
           putchar('\n');
           loop_second_phase = false;
