@@ -19,19 +19,24 @@ void print_tableau(double **tableau, int num_rows, int num_cols) {
     }
     putchar('\n');
   }
+  putchar('\n');
 }
 
-void init_tableau(double **tableau, int n, int m, const double *c, double **a,
-                  const double *b) {
+double **init_tableau(int n, int m, const double *c, double **a,
+                      const double *b) {
   int num_rows = n + 1;
   int num_cols = n + m + n + 1;
 
+  double **tableau = (double **)malloc(sizeof(double *) * num_rows);
+
   for (int i = 0; i < num_rows; ++i) {
     tableau[i] = (double *)malloc(sizeof(double) * num_cols);
-    memset(tableau[i], 0, sizeof(int) * num_cols);
+    for (int j = 0; j < num_cols; ++j) {
+      tableau[i][j] = 0;
+    }
   }
 
-  // ??
+  // Vetor de custos
   for (int i = 0; i < m; ++i) {
     tableau[0][i + n] = -c[i];
   }
@@ -55,8 +60,18 @@ void init_tableau(double **tableau, int n, int m, const double *c, double **a,
 
   // Vetor de b
   for (int i = 0; i < n; ++i) {
-    tableau[i + 1][num_cols - 1] = b[i];
+    // É necessário inverter a linha se b < 0
+    if (b[i] < 0) {
+      tableau[i + 1][num_cols - 1] = -b[i];
+      for (int j = 0; j < num_cols - 1; ++j) {
+        tableau[i + 1][j] *= -1;
+      }
+    } else {
+      tableau[i + 1][num_cols - 1] = b[i];
+    }
   }
+
+  return tableau;
 }
 
 int get_min_ratio_index(int num_cols, int col, double **tableau, int n) {
@@ -74,7 +89,7 @@ int get_min_ratio_index(int num_cols, int col, double **tableau, int n) {
     // entrar na base.
     //
     // Basta não trocar o índice quando quando há empate
-    if (ratio > 0 && ratio < min_ratio) {
+    if (ratio >= 0 && ratio < min_ratio && tableau[j][col] > 0) {
       min_ratio = ratio;
       min_ratio_index = j;
     }
@@ -85,12 +100,15 @@ int get_min_ratio_index(int num_cols, int col, double **tableau, int n) {
 
 void pivoting(int num_cols, int num_rows, double **tableau, int min_ratio_index,
               int col) {
+  // print_tableau(tableau, num_rows, num_cols);
   // Fazendo a elemento da linha do índice ser 1
   // Essa variável é necessária pois sobrescrevemos o valor dela
   double ratio = tableau[min_ratio_index][col];
   for (int j = 0; j < num_cols; ++j) {
     tableau[min_ratio_index][j] = tableau[min_ratio_index][j] / ratio;
   }
+
+  // print_tableau(tableau, num_rows, num_cols);
 
   // Zerando outras linhas
   for (int j = 0; j < num_rows; ++j) {
@@ -104,13 +122,15 @@ void pivoting(int num_cols, int num_rows, double **tableau, int min_ratio_index,
       tableau[j][k] -= multiplier * tableau[min_ratio_index][k];
     }
   }
+
+  // print_tableau(tableau, num_rows, num_cols);
 }
 
-void result_optimal(double **tableau, int num_cols, const int *basis, int n) {
-  // TODO ver questão de usar variáveis de folga na saída
+void result_optimal(double **tableau, int num_cols, const int *basis, int n,
+                    int m) {
   printf("otima\n");
   printf("%05.2lf\n", tableau[0][num_cols - 1]);
-  for (int j = 0; j < n; ++j) {
+  for (int j = 0; j < m; ++j) {
     for (int k = 0; k < n; ++k) {
       if (basis[k] == j + n) {
         printf("%05.2lf ", tableau[k + 1][num_cols - 1]);
@@ -128,47 +148,133 @@ void result_optimal(double **tableau, int num_cols, const int *basis, int n) {
   putchar('\n');
 }
 
-void simplex(int n, int m, const double *c, double **a, const double *b) {
-  int num_rows = n + 1;
-  int num_cols = n + m + n + 1;
-  double **tableau = (double **)malloc(sizeof(double *) * num_rows);
-  int basis[n];
+void result_unlimited(double **tableau, int col, const int *basis, int n,
+                      int m) {
+  printf("ilimitada\n");
+  for (int i = 0; i < m; ++i) {
+    if (i + n == col) {
+      printf("%05.2f ", 1.);
+      continue;
+    }
+    for (int j = 0; j < n; ++j) {
+      if (basis[j] == i + n) {
+        printf("%05.2lf ", -tableau[j][col]);
+        break;
+      }
+      if (j == n - 1) {
+        printf("%05.2f ", 0.);
+      }
+    }
+  }
+  putchar('\n');
+}
 
-  for (int i = 0; i < n; ++i) {
-    basis[i] = m + n + i;
+double **init_auxiliary(int n, int m, double **a, const double *b) {
+  int num_rows = n + 1;
+  int num_cols = n + m + n + n + 1;
+
+  double **tableau = (double **)malloc(sizeof(double *) * num_rows);
+
+  for (int i = 0; i < num_rows; ++i) {
+    tableau[i] = (double *)malloc(sizeof(double) * num_cols);
+    for (int j = 0; j < num_cols; ++j) {
+      tableau[i][j] = 0;
+    }
   }
 
-  init_tableau(tableau, n, m, c, a, b);
+  // Vetor de custos
+  for (int i = n + m + n; i < num_cols - 1; ++i) {
+    tableau[0][i] = 1;
+  }
+
+  // Matriz A
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < m; ++j) {
+      tableau[i + 1][n + j] = a[i][j];
+    }
+  }
+
+  // Registro de Operações
+  for (int i = 0; i < n; ++i) {
+    tableau[i + 1][i] = 1;
+  }
+
+  // Variáveis de folga da PL original
+  for (int i = 0; i < n; ++i) {
+    tableau[i + 1][n + m + i] = 1;
+  }
+
+  // Vetor de b
+  for (int i = 0; i < n; ++i) {
+    // É necessário inverter a linha se b < 0
+    if (b[i] < 0) {
+      tableau[i + 1][num_cols - 1] = -b[i];
+      for (int j = 0; j < num_cols - 1; ++j) {
+        tableau[i + 1][j] *= -1;
+      }
+    } else {
+      tableau[i + 1][num_cols - 1] = b[i];
+    }
+  }
+
+  // Variáveis do auxiliar
+  // Não devem ser invertida com o 'b'
+  for (int i = 0; i < n; ++i) {
+    tableau[i + 1][n + m + n + i] = 1;
+  }
+
+  // Colocando na base canônica
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < num_cols; ++j) {
+      tableau[0][j] -= tableau[i + 1][j];
+    }
+  }
+
+  return tableau;
+}
+
+void simplex(int n, int m, const double *c, double **a, const double *b,
+             int *basis) {
+  int num_rows = n + 1;
+  int num_cols = n + m + n + 1;
+  double **tableau = init_tableau(n, m, c, a, b);
+  for (int i = 0; i < n; ++i) {
+    basis[i] = -1;
+  }
+  // print_basis(basis, n);
+  // print_tableau(tableau, num_rows, num_cols);
+  // Vetor de custos
+  // for (int i = 0; i < num_cols; ++i) {
+  //   tableau[0][i] = 0;
+  // }
+  // for (int i = 0; i < m; ++i) {
+  //   tableau[0][i + n] = -c[i];
+  // }
 
   bool loop = true;
+  // print_basis(basis, n);
+  // print_tableau(tableau, num_rows, num_cols);
+  // for (int i = 0; i < n; ++i) {
+  //   pivoting(num_cols, num_rows, tableau, i, basis[i]);
+  // }
+  // print_tableau(tableau, num_rows, num_cols);
   while (loop) {
-    for (int i = n; i < n + m + n; ++i) {
+    for (int i = n; i < num_cols - 1; ++i) {
       if (tableau[0][i] < 0) {
         int min_ratio_index = get_min_ratio_index(num_cols, i, tableau, n);
+
         if (min_ratio_index != -1) {
           basis[min_ratio_index - 1] = i;
           pivoting(num_cols, num_rows, tableau, min_ratio_index, i);
+          // print_basis(basis, n);
+          // print_tableau(tableau, num_rows, num_cols);
         }
         // A solução é ilimitada quando nenhuma das razões é maior que 0
         else {
-          printf("ilimitada\n");
-          print_tableau(tableau, num_rows, num_cols);
-          for (int j = 0; j < n + m; ++j) {
-            if (j + n == i) {
-              printf("%05.2f ", 1.);
-              continue;
-            }
-            for (int k = 0; k < n; ++k) {
-              if (basis[k] == j + n) {
-                printf("%05.2lf ", -tableau[k][i]);
-                break;
-              }
-              // if (k == n - 1) {
-              //   printf("%05.2f ", 0.);
-              // }
-            }
-          }
-          putchar('\n');
+          // TODO certificado
+          // print_basis(basis, n);
+          // print_tableau(tableau, num_rows, num_cols);
+          result_unlimited(tableau, i, basis, n, m);
           loop = false;
         }
 
@@ -181,7 +287,9 @@ void simplex(int n, int m, const double *c, double **a, const double *b) {
       // Se ninguém pode sair da base, sair do loop
       if (i == n + m + n - 1 && loop) {
         // TODO certificado
-        result_optimal(tableau, num_cols, basis, n);
+        // print_basis(basis, n);
+        // print_tableau(tableau, num_rows, num_cols);
+        result_optimal(tableau, num_cols, basis, n, m);
         loop = false;
       }
     }
@@ -190,6 +298,57 @@ void simplex(int n, int m, const double *c, double **a, const double *b) {
     free(tableau[i]);
   }
   free(tableau);
+}
+
+void auxiliary(int n, int m, double **a, const double *b, bool *is_viable,
+               int *basis) {
+  int num_rows = n + 1;
+  int num_cols = n + m + n + n + 1;
+  double **auxiliary_tableau = init_auxiliary(n, m, a, b);
+  // print_tableau(auxiliary_tableau, num_rows, num_cols);
+  // print_basis(basis, n);
+
+  bool loop = true;
+  while (loop) {
+    for (int i = n; i < num_cols - 1; ++i) {
+      if (auxiliary_tableau[0][i] < 0) {
+        int min_ratio_index =
+            get_min_ratio_index(num_cols, i, auxiliary_tableau, n);
+
+        if (min_ratio_index != -1) {
+          basis[min_ratio_index - 1] = i;
+          pivoting(num_cols, num_rows, auxiliary_tableau, min_ratio_index, i);
+          // print_tableau(auxiliary_tableau, num_rows, num_cols);
+          // print_basis(basis, n);
+
+          // Regra de Bland: para escolher a variável que vai sair da base, nós
+          // escolhemos a de menor índice
+          //
+          // Um jeito de fazer isso é breakar o loop
+          break;
+        }
+      }
+      // Se ninguém pode sair da base, sair do loop
+      if (i == num_cols - 2) {
+        // Problema é inviável
+        if (auxiliary_tableau[0][num_cols - 1] < 0) {
+          *is_viable = false;
+          printf("inviavel\n");
+          for (int j = 0; j < n; ++j) {
+            printf("%04.2f ", auxiliary_tableau[0][j]);
+          }
+          putchar('\n');
+        }
+        loop = false;
+      }
+    }
+  }
+  // print_basis(basis, n);
+  // print_tableau(auxiliary_tableau, num_rows, num_cols);
+  for (int i = 0; i < num_rows; i++) {
+    free(auxiliary_tableau[i]);
+  }
+  free(auxiliary_tableau);
 }
 
 int main(void) {
@@ -207,201 +366,35 @@ int main(void) {
 
   double **a = (double **)malloc(sizeof(double *) * n);
 
+  bool run_auxiliary = false;
   for (int i = 0; i < n; ++i) {
     a[i] = (double *)malloc(sizeof(double) * m);
     for (int j = 0; j < m; ++j) {
       scanf("%lf", &a[i][j]);
     }
     scanf("%lf", &b[i]);
-  }
-
-  int first_lines = n + 1;
-  int first_columns = n + m + n + 1;
-  double **first_phase = (double **)malloc(sizeof(double *) * first_lines);
-
-  for (int i = 0; i < first_lines; ++i) {
-    first_phase[i] = (double *)malloc(sizeof(double) * first_columns);
-    memset(first_phase[i], 0, sizeof(int) * first_columns);
-  }
-
-  // Criando a linha do topo
-  for (int i = n + m; i < first_columns - 1; ++i) {
-    first_phase[0][i] = 1;
-  }
-
-  // Colocando a matriz 'a'
-  for (int i = 0; i < n; ++i) {
-    for (int j = 0; j < m; ++j) {
-      first_phase[i + 1][n + j] = a[i][j];
-    }
-  }
-
-  // Colocando a identidade
-  for (int i = 0; i < n; ++i) {
-    first_phase[i + 1][i] = 1;
-  }
-
-  // Colocando o vetor de b's
-  for (int i = 0; i < n; ++i) {
     if (b[i] < 0) {
-      first_phase[i + 1][first_columns - 1] = -b[i];
-      for (int j = 0; j < first_columns - 1; ++j) {
-        first_phase[i + 1][j] *= -1;
-      }
-    } else {
-      first_phase[i + 1][first_columns - 1] = b[i];
+      run_auxiliary = true;
     }
   }
 
-  // Colocando a identidade (das variáveis de folga)
-  // Não deve ser invertida com o 'b'
-  for (int i = 0; i < n; ++i) {
-    first_phase[i + 1][n + m + i] = 1;
-  }
-
-  // for (int j = 0; j < first_lines; j++) {
-  //   for (int k = 0; k < first_columns; ++k) {
-  //     printf("%+06.2lf ", first_phase[j][k]);
-  //   }
-  //   putchar('\n');
-  // }
-  // putchar('\n');
-
-  // Colocando na base canônica
-  for (int i = 0; i < n; ++i) {
-    for (int j = 0; j < first_columns; ++j) {
-      first_phase[0][j] -= first_phase[i + 1][j];
-    }
-  }
-
-  // for (int j = 0; j < first_lines; j++) {
-  //   for (int k = 0; k < first_columns; ++k) {
-  //     printf("%+06.2lf ", first_phase[j][k]);
-  //   }
-  //   putchar('\n');
-  // }
-
-  bool loop_first_phase = true;
   bool is_viable = true;
-  while (loop_first_phase) {
-    for (int i = n; i < first_columns - 1; ++i) {
-      if (first_phase[0][i] < 0) {
+  int basis[n];
+  for (int i = 0; i < n; ++i) {
+    basis[i] = n + m + i;
+  }
 
-        // for (int j = 0; j < first_lines; j++) {
-        //   for (int k = 0; k < first_columns; ++k) {
-        //     printf("%+06.2lf ", first_phase[j][k]);
-        //   }
-        //   putchar('\n');
-        // }
-        // printf("----------------------------------\n");
-
-        double min_ratio = INFINITY;
-        int min_ratio_index = -1;
-
-        // Encontrando o índice para entrar na base
-        for (int j = 1; j <= n; ++j) {
-          if (first_phase[j][i] == 0) {
-            continue;
-          }
-          double ratio = first_phase[j][first_columns - 1] / first_phase[j][i];
-
-          // Regra de Bland: nós sempre pegamos a variável de menor índice
-          // dentre aquelas que podem entrar na base.
-          //
-          // Para fazer isso, basta não trocar a razão quando quando há empate
-          if (ratio > 0 && ratio < min_ratio) {
-            min_ratio = ratio;
-            min_ratio_index = j;
-          }
-        }
-
-        // Pivoteamento
-        if (min_ratio != INFINITY) {
-          // Fazendo a elemento da linha do índice ser 1
-          double multiplier = first_phase[min_ratio_index][i];
-          for (int j = 0; j < first_columns; ++j) {
-            first_phase[min_ratio_index][j] =
-                first_phase[min_ratio_index][j] / multiplier;
-          }
-          // Zerando outras linhas
-          for (int j = 0; j < first_lines; ++j) {
-            // Estamos na coluna que realmente deve ser igual a 1
-            if (j == min_ratio_index) {
-              continue;
-            }
-            double ratio = first_phase[j][i] / first_phase[min_ratio_index][i];
-            for (int k = 0; k < first_columns; ++k) {
-              first_phase[j][k] -= ratio * first_phase[min_ratio_index][k];
-            }
-          }
-          // for (int j = 0; j < first_lines; ++j) {
-          //   if (j == min_ratio_index) {
-          //     // Fazendo a elmento da linha do índice ser 1
-          //     double multiplier = first_phase[min_ratio_index][i];
-          //
-          //     for (int k = 0; k < first_columns; ++k) {
-          //       first_phase[j][k] = first_phase[j][k] / multiplier;
-          //     }
-          //     continue;
-          //   }
-          //
-          //   // Zerando outras linhas
-          //   double ratio = first_phase[j][i] /
-          //   first_phase[min_ratio_index][i];
-          //
-          //   for (int k = 0; k < first_columns; ++k) {
-          //     first_phase[j][k] -= ratio * first_phase[min_ratio_index][k];
-          //   }
-          // }
-        }
-
-        // Regra de Bland: para escolher a variável que vai sair da base, nós
-        // escolhemos a de menor índice
-        //
-        // Um jeito de fazer isso é breakar o loop
-        break;
-      }
-      // Se ninguém pode sair da base, sair do loop
-      if (i == first_columns - 2) {
-        // Problema é inviável
-        if (first_phase[0][first_columns - 1] < 0) {
-          is_viable = false;
-
-          // for (int j = 0; j < first_lines; j++) {
-          //   for (int k = 0; k < first_columns; ++k) {
-          //     printf("%+06.2lf ", first_phase[j][k]);
-          //   }
-          //   putchar('\n');
-          // }
-
-          printf("inviavel\n");
-          for (int j = 0; j < n; ++j) {
-            printf("%04.2f ", first_phase[0][j]);
-          }
-          putchar('\n');
-        }
-        loop_first_phase = false;
-      }
+  if (run_auxiliary) {
+    for (int i = 0; i < n; ++i) {
+      basis[i] = n + m + n + i;
     }
+    auxiliary(n, m, a, b, &is_viable, basis);
   }
 
   if (is_viable) {
-    // TODO(): usar isso aqui pra não ter que ficar caçando quem é a base na
-    // mão
-    // int second_basis[n];
-    // for (int i = 0; i < n; ++i) {
-    //   second_basis[i] = i;
-    // }
-    simplex(n, m, c, a, b);
+    simplex(n, m, c, a, b, basis);
   }
 
-  for (int i = 0; i < first_lines; i++) {
-    free(first_phase[i]);
-  }
-  for (int i = 0; i < n; i++) {
-    free(a[i]);
-  }
-  free(first_phase);
   free(a);
   free(c);
   free(b);
