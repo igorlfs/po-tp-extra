@@ -4,8 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define EPSILON 1e-20
-
 void print_basis(int *basis, int size) {
   for (int i = 0; i < size; ++i) {
     printf("%d ", basis[i]);
@@ -353,17 +351,27 @@ void auxiliary(int n, int m, double **a, const double *b, bool *is_viable) {
   free(auxiliary_tableau);
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
   int n; // Número de Restrições
   int m; // Número de Variáveis
 
-  scanf("%d %d", &n, &m);
+  if (argc == 0) {
+    return 1;
+  }
+
+  FILE *input_file_handler = fopen(argv[1], "r");
+
+  if (input_file_handler == NULL) {
+    return 1;
+  }
+
+  fscanf(input_file_handler, "%d %d", &n, &m);
 
   double *c = (double *)malloc(sizeof(double) * m);
   double *b = (double *)malloc(sizeof(double) * n);
 
   for (int i = 0; i < m; ++i) {
-    scanf("%lf", &c[i]);
+    fscanf(input_file_handler, "%lf", &c[i]);
   }
 
   double **a = (double **)malloc(sizeof(double *) * n);
@@ -372,13 +380,15 @@ int main(void) {
   for (int i = 0; i < n; ++i) {
     a[i] = (double *)malloc(sizeof(double) * m);
     for (int j = 0; j < m; ++j) {
-      scanf("%lf", &a[i][j]);
+      fscanf(input_file_handler, "%lf", &a[i][j]);
     }
-    scanf("%lf", &b[i]);
+    fscanf(input_file_handler, "%lf", &b[i]);
     if (b[i] < 0) {
       run_auxiliary = true;
     }
   }
+
+  fclose(input_file_handler);
 
   bool is_viable = true;
 
