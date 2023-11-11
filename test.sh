@@ -2,7 +2,7 @@
 
 gcc main.c -o main
 
-test -f "$file" && rm all-actual
+test -f "all-actual" && rm all-actual
 
 for file in ./input/*; do
 	if [[ -f "$file" ]]; then
