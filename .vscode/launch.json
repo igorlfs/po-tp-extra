@@ -7,10 +7,8 @@
             "request": "launch",
             "preLaunchTask": "Compile C (Clang) (Debug)",
             "expressions": "native",
-            "stdio": [
-                "tests/04",
-                null,
-                null
+            "args": [
+                "input/13"
             ],
             "program": "${workspaceFolder}/${fileBasenameNoExtension}"
         }
