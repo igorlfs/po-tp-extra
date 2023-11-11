@@ -301,7 +301,7 @@ void simplex(int n, int m, const double *c, double **a, const double *b) {
         break;
       }
       // Se ninguém pode sair da base, sair do loop
-      if (i == n + m + n - 1 && loop) {
+      if (i == num_cols - 2 && loop) {
         result_optimal(tableau, num_cols, num_rows, n, m);
         loop = false;
       }
