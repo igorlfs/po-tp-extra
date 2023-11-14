@@ -12,10 +12,26 @@ void print_basis(int *basis, int size) {
   putchar('\n');
 }
 
-void print_tableau(double **tableau, int num_rows, int num_cols) {
+void print_tableau(double **tableau, int n, int m, bool auxiliary) {
+  int num_rows = n + 1;
+  int num_cols = n + m + n + 1;
+  if (auxiliary) {
+    num_cols += n;
+  }
   for (int i = 0; i < num_rows; i++) {
     for (int j = 0; j < num_cols; ++j) {
-      printf("%+06.2lf ", tableau[i][j]);
+      if (j == n) {
+        printf("||  ");
+      }
+      if (j == num_cols - 1) {
+        printf("|  ");
+      }
+      printf("%+06.2lf", tableau[i][j]);
+      if (j != num_cols - 1) {
+        printf("  ");
+      } else if (i == 0) {
+        putchar('\n');
+      }
     }
     putchar('\n');
   }
