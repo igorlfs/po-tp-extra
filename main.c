@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define EPSILON 10e-6
+
 void print_basis(int *basis, int size) {
   for (int i = 0; i < size; ++i) {
     printf("%d ", basis[i]);
@@ -290,15 +292,18 @@ double **init_auxiliary(int n, int m, double **a, const double *b) {
   return tableau;
 }
 
-void simplex(int n, int m, const double *c, double **a, const double *b) {
+void simplex(int n, int m, double **tableau, bool inherits_auxiliary) {
   int num_rows = n + 1;
   int num_cols = n + m + n + 1;
-  double **tableau = init_tableau(n, m, c, a, b);
+
+  if (inherits_auxiliary) {
+    num_cols += n;
+  }
 
   bool loop = true;
   while (loop) {
     for (int i = n; i < num_cols - 1; ++i) {
-      if (tableau[0][i] < 0) {
+      if (tableau[0][i] < -EPSILON) {
         int min_ratio_index = get_min_ratio_index(num_cols, i, tableau, n);
 
         if (min_ratio_index != -1) {
@@ -329,7 +334,7 @@ void simplex(int n, int m, const double *c, double **a, const double *b) {
   free(tableau);
 }
 
-void auxiliary(int n, int m, double **a, const double *b, bool *is_viable) {
+double **auxiliary(int n, int m, double **a, const double *b, bool *is_viable) {
   int num_rows = n + 1;
   int num_cols = n + m + n + n + 1;
   double **auxiliary_tableau = init_auxiliary(n, m, a, b);
@@ -337,7 +342,7 @@ void auxiliary(int n, int m, double **a, const double *b, bool *is_viable) {
   bool loop = true;
   while (loop) {
     for (int i = n; i < num_cols - 1; ++i) {
-      if (auxiliary_tableau[0][i] < 0) {
+      if (auxiliary_tableau[0][i] < -EPSILON) {
         int min_ratio_index =
             get_min_ratio_index(num_cols, i, auxiliary_tableau, n);
 
@@ -353,7 +358,7 @@ void auxiliary(int n, int m, double **a, const double *b, bool *is_viable) {
       // Se ninguém pode sair da base, sair do loop
       if (i == num_cols - 2) {
         // Problema é inviável
-        if (auxiliary_tableau[0][num_cols - 1] < 0) {
+        if (auxiliary_tableau[0][num_cols - 1] < -EPSILON) {
           *is_viable = false;
           result_unviable(n, auxiliary_tableau);
         }
@@ -361,10 +366,7 @@ void auxiliary(int n, int m, double **a, const double *b, bool *is_viable) {
       }
     }
   }
-  for (int i = 0; i < num_rows; i++) {
-    free(auxiliary_tableau[i]);
-  }
-  free(auxiliary_tableau);
+  return auxiliary_tableau;
 }
 
 int main(int argc, char *argv[]) {
@@ -406,14 +408,21 @@ int main(int argc, char *argv[]) {
 
   fclose(input_file_handler);
 
-  bool is_viable = true;
-
   if (run_auxiliary) {
-    auxiliary(n, m, a, b, &is_viable);
-  }
+    bool is_viable = true;
+    double **tableau = auxiliary(n, m, a, b, &is_viable);
 
-  if (is_viable) {
-    simplex(n, m, c, a, b);
+    for (int i = 0; i < m; ++i) {
+      tableau[0][i + n] = -c[i];
+    }
+
+    if (is_viable) {
+      simplex(n, m, tableau, true);
+    }
+  } else {
+    double **tableau = init_tableau(n, m, c, a, b);
+
+    simplex(n, m, tableau, false);
   }
 
   free(a);
