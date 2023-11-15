@@ -416,6 +416,10 @@ int main(int argc, char *argv[]) {
       tableau[0][i + n] = -c[i];
     }
 
+    for (int i = 0; i < n; ++i) {
+      tableau[0][i] = 0;
+    }
+
     if (is_viable) {
       simplex(n, m, tableau, true);
     }
